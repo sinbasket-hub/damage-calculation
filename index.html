@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パズドラ ダメージ計算ツール</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --card-bg: #1e293b;
+      --input-bg: #0f172a;
+      --accent-gold: #f59e0b;
+      --accent-blue: #38bdf8;
+      --accent-red: #ef4444;
+      --accent-green: #22c55e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      padding: 12px 8px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .calculator-container {
+      background: var(--card-bg);
+      border: 2px solid #475569;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 850px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+
+    /* ヘッダーレイアウト */
+    .header {
+      background: linear-gradient(90deg, #312e81, #4338ca);
+      padding: 14px 16px;
+      border-bottom: 2px solid #4f46e5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .header h1 {
+      font-size: 1.15rem;
+      color: #fff;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      margin: 0;
+    }
+
+    .header-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .head-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .head-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .head-btn-list {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: var(--accent-blue);
+    }
+
+    .head-btn-list:hover {
+      background: rgba(56, 189, 248, 0.35);
+    }
+
+    /* フォーム＆結果 グリッド */
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    /* フォームエリア */
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .input-block {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+
+    .label-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--input-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      padding: 4px 12px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent-blue);
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      background: transparent;
+      border: none;
+      color: var(--accent-gold);
+      padding: 8px 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+      width: 100%;
+      text-align: right;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      outline: none;
+    }
+
+    .unit-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* プリセットボタン */
+    .preset-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .btn-chip {
+      background: #334155;
+      border: none;
+      color: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex: 1 1 auto;
+      text-align: center;
+      min-width: 48px;
+    }
+
+    .btn-chip:hover {
+      background: #475569;
+    }
+
+    /* 潜在覚醒サブブロック */
+    .latent-sub-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    @media (min-width: 400px) {
+      .latent-sub-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .latent-item {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .latent-item-title {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* 計算結果カード */
+    .result-section {
+      background: linear-gradient(180deg, #111827 0%, #1e1b4b 100%);
+      border: 2px solid var(--accent-gold);
+      border-radius: 16px;
+      padding: 24px 16px 20px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .result-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent-gold);
+      color: #000;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 3px 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+
+    .result-number {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--accent-red);
+      text-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+      line-height: 1.1;
+      margin: 12px 0 16px;
+      word-break: break-all;
+    }
+
+    .result-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .detail-item {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .detail-value {
+      display: block;
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--accent-blue);
+      margin-top: 2px;
+    }
+
+    /* ポップアップ（モーダル）スタイル */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 2px solid var(--accent-blue);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 750px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      animation: modalFadeIn 0.25s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      background: linear-gradient(90deg, #1e1b4b, #312e81);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--accent-gold);
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    .modal-close-btn:hover {
+      color: #fff;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .modal-body {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* 表デザイン */
+    .list-table-box {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .list-table-title {
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 800;
+      text-align: center;
+      padding: 6px;
+      font-size: 0.9rem;
+    }
+
+    .list-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .list-table th {
+      background: #14532d;
+      color: #ffffff;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: bold;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .list-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+    }
+
+    .list-table tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* PC・タブレット調整 */
+    @media (min-width: 520px) {
+      .header {
+        flex-direction: row;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .header h1 {
+        font-size: 1.25rem;
+      }
+
+      .header-btns {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+    }
+
+    /* PC（横幅 680px 以上）で2列表示 */
+    @media (min-width: 680px) {
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        align-items: stretch;
+      }
+
+      .result-section {
+        height: 100%;
+      }
+
+      .result-number {
+        font-size: 2.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="calculator-container">
+  <!-- ヘッダー -->
+  <div class="header">
+    <h1>⚔️ パズドラ ダメージ計算機</h1>
+    <div class="header-btns">
+      <button class="head-btn head-btn-list" onclick="openModal()">📋 軽減リスト</button>
+      <button class="head-btn" onclick="resetForm()">リセット</button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- 入力フォームエリア -->
+    <div class="form-section">
+
+      <!-- 1. 敵の攻撃力 -->
+      <div class="input-block">
+        <label class="label-title" for="enemyAtk">👾 敵の攻撃力</label>
+        <div class="input-wrapper">
+          <input type="text" id="enemyAtk" value="100,000" oninput="formatAndCalculate(this)">
+          <span class="unit-text">ダメージ</span>
+        </div>
+        <div class="preset-group">
+          <button class="btn-chip" onclick="setAtk(100000)">10万</button>
+          <button class="btn-chip" onclick="setAtk(500000)">50万</button>
+          <button class="btn-chip" onclick="setAtk(1000000)">100万</button>
+          <button class="btn-chip" onclick="setAtk(5000000)">500万</button>
+          <button class="btn-chip" onclick="setAtk(10000000)">1000万</button>
+        </div>
+      </div>
+
+      <!-- 2. リーダー軽減率 -->
+      <div class="input-block">
+        <label class="label-title" for="leaderShield">👑 リーダー軽減率</label>
+        <div class="input-wrapper">
+          <input type="number" id="leaderShield" value="82" min="0" max="100" oninput="calculate()">
+          <span class="unit-text">% 軽減</span>
+        </div>
+        <div class="preset-group">
+          <button class="btn-chip" onclick="setShield('leaderShield', 70)">70%</button>
+          <button class="btn-chip" onclick="setShield('leaderShield', 75)">75%</button>
+          <button class="btn-chip" onclick="setShield('leaderShield', 80)">80%</button>
+          <button class="btn-chip" onclick="setShield('leaderShield', 82)">82%</button>
+          <button class="btn-chip" onclick="setShield('leaderShield', 85)">85%</button>
+        </div>
+      </div>
+
+      <!-- 3. フレンド軽減率 -->
+      <div class="input-block">
+        <label class="label-title" for="friendShield">🤝 フレンド軽減率</label>
+        <div class="input-wrapper">
+          <input type="number" id="friendShield" value="82" min="0" max="100" oninput="calculate()">
+          <span class="unit-text">% 軽減</span>
+        </div>
+        <div class="preset-group">
+          <button class="btn-chip" onclick="setShield('friendShield', 70)">70%</button>
+          <button class="btn-chip" onclick="setShield('friendShield', 75)">75%</button>
+          <button class="btn-chip" onclick="setShield('friendShield', 80)">80%</button>
+          <button class="btn-chip" onclick="setShield('friendShield', 82)">82%</button>
+          <button class="btn-chip" onclick="setShield('friendShield', 85)">85%</button>
+        </div>
+      </div>
+
+      <!-- 4. スキル軽減率 -->
+      <div class="input-block">
+        <label class="label-title" for="skillShield">✨ スキル軽減率</label>
+        <div class="input-wrapper">
+          <input type="number" id="skillShield" value="0" min="0" max="100" oninput="calculate()">
+          <span class="unit-text">% 軽減</span>
+        </div>
+        <div class="preset-group">
+          <button class="btn-chip" onclick="setShield('skillShield', 0)">なし (0%)</button>
+          <button class="btn-chip" onclick="setShield('skillShield', 35)">35%</button>
+          <button class="btn-chip" onclick="setShield('skillShield', 50)">50% (半減)</button>
+          <button class="btn-chip" onclick="setShield('skillShield', 75)">75% (激減)</button>
+        </div>
+      </div>
+
+      <!-- 5. 回復L字消し覚醒 -->
+      <div class="input-block">
+        <label class="label-title">💚 回復L字消し（1個につき5%軽減）</label>
+        <div class="input-wrapper">
+          <input type="number" id="healLCount" value="0" min="0" max="99" oninput="calculate()">
+          <span class="unit-text">個（<span id="healLPercentText">0%</span> 軽減）</span>
+        </div>
+        <div class="preset-group">
+          <button class="btn-chip" onclick="setHealL(0)">0個</button>
+          <button class="btn-chip" onclick="setHealL(1)">1個 (5%)</button>
+          <button class="btn-chip" onclick="setHealL(2)">2個 (10%)</button>
+          <button class="btn-chip" onclick="setHealL(3)">3個 (15%)</button>
+          <button class="btn-chip" onclick="setHealL(4)">4個 (20%)</button>
+          <button class="btn-chip" onclick="setHealL(6)">6個 (30%)</button>
+        </div>
+      </div>
+
+      <!-- 6. 潜在覚醒（属性軽減） -->
+      <div class="input-block">
+        <label class="label-title">💎 潜在たまドラ（属性軽減）</label>
+        
+        <div class="latent-sub-grid">
+          <!-- 1% 軽減 -->
+          <div class="latent-item">
+            <span class="latent-item-title">■ 1% 軽減（普通）</span>
+            <div class="input-wrapper">
+              <input type="number" id="latent1" value="0" min="0" max="99" oninput="calculate()">
+              <span class="unit-text">個</span>
+            </div>
+            <div class="preset-group">
+              <button class="btn-chip" onclick="setLatent('latent1', 0)">0</button>
+              <button class="btn-chip" onclick="setLatent('latent1', 1)">1</button>
+              <button class="btn-chip" onclick="setLatent('latent1', 3)">3</button>
+              <button class="btn-chip" onclick="setLatent('latent1', 6)">6</button>
+            </div>
+          </div>
+
+          <!-- 2.5% 軽減 -->
+          <div class="latent-item">
+            <span class="latent-item-title">■ 2.5% 軽減（+）</span>
+            <div class="input-wrapper">
+              <input type="number" id="latent25" value="0" min="0" max="99" oninput="calculate()">
+              <span class="unit-text">個</span>
+            </div>
+            <div class="preset-group">
+              <button class="btn-chip" onclick="setLatent('latent25', 0)">0</button>
+              <button class="btn-chip" onclick="setLatent('latent25', 1)">1</button>
+              <button class="btn-chip" onclick="setLatent('latent25', 3)">3</button>
+              <button class="btn-chip" onclick="setLatent('latent25', 6)">6</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 計算結果エリア -->
+    <div class="result-section">
+      <div class="result-badge">受けダメージ結果</div>
+      <div class="result-number" id="finalDamage">3,240</div>
+
+      <div class="result-details">
+        <div class="detail-item">
+          実質カット率
+          <span class="detail-value" id="totalReduction">96.76%</span>
+        </div>
+        <div class="detail-item">
+          受ける倍率
+          <span class="detail-value" id="damageMultiplier">0.0324倍</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ポップアップモーダル（軽減リスト） -->
+<div class="modal-overlay" id="listModal" onclick="closeModalOnBg(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">📊 軽減分類リスト</div>
+      <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      
+      <!-- 表1: 軽減リスト -->
+      <div class="list-table-box">
+        <div class="list-table-title">軽減リスト</div>
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">No.</th>
+              <th>軽減数値</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>ダメージ軽減（30%）</td></tr>
+            <tr><td>2</td><td>ダメージ軽減（35%）</td></tr>
+            <tr><td>3</td><td>ダメージ40%軽減</td></tr>
+            <tr><td>4</td><td>ダメージ45%軽減</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 表2: 半減リスト -->
+      <div class="list-table-box">
+        <div class="list-table-title">半減リスト</div>
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">No.</th>
+              <th>半減数値</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>ダメージ半減（50%）</td></tr>
+            <tr><td>2</td><td>ダメージ60%軽減</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 表3: 激減リスト -->
+      <div class="list-table-box">
+        <div class="list-table-title">激減リスト</div>
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">No.</th>
+              <th>激減数値</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>ダメージ激減（75%）</td></tr>
+            <tr><td>2</td><td>ダメージ80%軽減</td></tr>
+            <tr><td>3</td><td>ダメージ90%軽減</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // カンマ区切りのフォーマット関数
+  function formatAndCalculate(input) {
+    let rawVal = input.value.replace(/,/g, '').replace(/[^0-9]/g, '');
+    if (rawVal === '') {
+      input.value = '';
+    } else {
+      input.value = parseInt(rawVal, 10).toLocaleString();
+    }
+    calculate();
+  }
+
+  function calculate() {
+    const atkStr = document.getElementById('enemyAtk').value.replace(/,/g, '');
+    const atk = parseFloat(atkStr) || 0;
+    const leader = parseFloat(document.getElementById('leaderShield').value) || 0;
+    const friend = parseFloat(document.getElementById('friendShield').value) || 0;
+    const skill = parseFloat(document.getElementById('skillShield').value) || 0;
+
+    // 回復L字消し軽減（1個につき5%加算）
+    const healLCount = parseFloat(document.getElementById('healLCount').value) || 0;
+    const healLTotalPercent = healLCount * 5;
+    document.getElementById('healLPercentText').innerText = healLTotalPercent + "%";
+
+    // 潜在覚醒（加算計算）
+    const count1 = parseFloat(document.getElementById('latent1').value) || 0;
+    const count25 = parseFloat(document.getElementById('latent25').value) || 0;
+    const latentTotalPercent = (count1 * 1.0) + (count25 * 2.5);
+
+    // 乗算計算 (1 - 軽減率/100)
+    const leaderMult = 1 - (leader / 100);
+    const friendMult = 1 - (friend / 100);
+    const skillMult = 1 - (skill / 100);
+    const healLMult = 1 - (healLTotalPercent / 100);
+    const latentMult = 1 - (latentTotalPercent / 100);
+
+    // 総倍率
+    const totalMult = leaderMult * friendMult * skillMult * healLMult * latentMult;
+    const damage = Math.floor(atk * Math.max(0, totalMult));
+
+    const totalReduction = ((1 - Math.max(0, totalMult)) * 100).toFixed(2);
+
+    // 画面更新
+    document.getElementById('finalDamage').innerText = damage.toLocaleString();
+    document.getElementById('totalReduction').innerText = totalReduction + "%";
+    document.getElementById('damageMultiplier').innerText = Math.max(0, totalMult).toFixed(4) + "倍";
+  }
+
+  function setAtk(val) {
+    document.getElementById('enemyAtk').value = val.toLocaleString();
+    calculate();
+  }
+
+  function setShield(id, val) {
+    document.getElementById(id).value = val;
+    calculate();
+  }
+
+  function setHealL(val) {
+    document.getElementById('healLCount').value = val;
+    calculate();
+  }
+
+  function setLatent(id, val) {
+    document.getElementById(id).value = val;
+    calculate();
+  }
+
+  function resetForm() {
+    document.getElementById('enemyAtk').value = (100000).toLocaleString();
+    document.getElementById('leaderShield').value = 82;
+    document.getElementById('friendShield').value = 82;
+    document.getElementById('skillShield').value = 0;
+    document.getElementById('healLCount').value = 0;
+    document.getElementById('latent1').value = 0;
+    document.getElementById('latent25').value = 0;
+    calculate();
+  }
+
+  /* モーダル表示制御 */
+  function openModal() {
+    document.getElementById('listModal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('listModal').classList.remove('active');
+  }
+
+  function closeModalOnBg(e) {
+    if (e.target.id === 'listModal') {
+      closeModal();
+    }
+  }
+
+  // 初回計算実行
+  calculate();
+</script>
+
+</body>
+</html>
